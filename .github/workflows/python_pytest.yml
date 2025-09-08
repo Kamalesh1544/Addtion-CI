@@ -6,25 +6,25 @@ on:
   pull_request:
     branches: [ main ]
 
+
 jobs:
-
-
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.10", "3.11"]
       fail-fast: false
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip dependencies
+      - name: Cache Pip Dependencies
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
@@ -32,28 +32,42 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install Build Dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
         shell: bash
 
+      - name: Verify Build
+        run: |
+          mkdir -p build
+          echo "✅ Build successful for Python ${{ matrix.python-version }} on $(date)" > build/build-info.txt
+        shell: bash
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact-${{ matrix.python-version }}
+          path: build/
+
   test:
-    needs: build
     runs-on: ubuntu-latest
+    needs: build
     strategy:
       matrix:
         python-version: ["3.10", "3.11"]
+      fail-fast: false
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip dependencies
+      - name: Cache Pip Dependencies
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
@@ -65,7 +79,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-html
+          pip install pytest pytest-html pytest-metadata pytest-html-merger
         shell: bash
 
       - name: Download Build Artifact
@@ -77,7 +91,10 @@ jobs:
       - name: Run Pytest and Generate HTML Report
         run: |
           mkdir -p test-reports
-          pytest --html=test-reports/report-${{ matrix.python-version }}.html --self-contained-html --disable-warnings
+          pytest \
+            --html=test-reports/report-${{ matrix.python-version }}.html \
+            --self-contained-html \
+            --disable-warnings
         shell: bash
 
       - name: Upload Pytest HTML Report
