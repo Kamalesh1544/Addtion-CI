@@ -1,7 +1,7 @@
 import pytest
 from main import add
 
-@pytest.mark.parametrize("a,b.expected",[
+@pytest.mark.parametrize("a,b,expected",[
     (1,1,2),
     (1,2,3),
     (2,2,4)
